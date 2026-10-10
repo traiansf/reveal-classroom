@@ -1,0 +1,25 @@
+# System-wide service (root-managed alternative to deploy/user/). Assumes:
+#   - a system user "reveal-classroom" that can read /opt/reveal-classroom;
+#   - an extracted bundle in /opt/reveal-classroom with dependencies installed (npm ci --omit=dev);
+#   - /etc/reveal-classroom.env, readable only by root, with HOST, PORT, BASE_PATH, PRESENTATION_PASSWORD.
+# Install: sudo cp reveal-classroom.service /etc/systemd/system/ && sudo systemctl enable --now reveal-classroom
+[Unit]
+Description=reveal-classroom presentation service
+After=network.target
+
+[Service]
+Type=simple
+User=reveal-classroom
+Group=reveal-classroom
+WorkingDirectory=/opt/reveal-classroom
+EnvironmentFile=/etc/reveal-classroom.env
+ExecStart=/usr/bin/node /opt/reveal-classroom/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,77 @@
+# .github/workflows/amss-presentation.yml in traiansf/traiansf.github.io once the course uses the
+# reveal-classroom package (see README.md). Same release, asset names and server as before.
+name: AMSS presentation on cs.unibuc.ro
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: amss-presentation-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: class/amss-2026/presentation
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: class/amss-2026/presentation/package-lock.json
+      - name: Install build tools
+        run: |
+          curl -fsSL --retry 3 https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb -o "$RUNNER_TEMP/pandoc.deb"
+          sudo dpkg -i "$RUNNER_TEMP/pandoc.deb"
+          sudo apt-get update -qq
+          sudo apt-get install -y graphviz plantuml fonts-noto-core
+          npm install --prefix "$RUNNER_TEMP/mermaid" @mermaid-js/mermaid-cli@12.0.0
+          printf '%s\n' '{"args":["--no-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
+          cat > "$RUNNER_TEMP/mmdc-ci" <<'SH'
+          #!/usr/bin/env bash
+          exec "$RUNNER_TEMP/mermaid/node_modules/.bin/mmdc" -p "$RUNNER_TEMP/puppeteer.json" "$@"
+          SH
+          chmod +x "$RUNNER_TEMP/mmdc-ci"
+          echo "MERMAID_BIN=$RUNNER_TEMP/mmdc-ci" >> "$GITHUB_ENV"
+      - name: Build and pack the released presentations
+        run: |
+          npm ci
+          npx reveal-classroom build --config reveal-classroom.config.json
+          npx reveal-classroom bundle --dist dist --deploy deploy --revision "$GITHUB_SHA" --out "$RUNNER_TEMP/amss-presentation.tar.gz"
+      - name: Smoke-test the bundle
+        run: |
+          mkdir "$RUNNER_TEMP/smoke"
+          tar -xzf "$RUNNER_TEMP/amss-presentation.tar.gz" -C "$RUNNER_TEMP/smoke"
+          cd "$RUNNER_TEMP/smoke"
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          PRESENTATION_PASSWORD=ci-only PORT=3107 BASE_PATH=/~tserbanuta/amss node server.mjs &
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://127.0.0.1:3107/~tserbanuta/amss/health && break; sleep 1; done
+          curl -fsS http://127.0.0.1:3107/~tserbanuta/amss/decks.json
+          kill %1
+      - name: Publish server update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view amss-live --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create amss-live --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title 'Prezentări AMSS pentru serviciul online' --prerelease \
+              --notes 'Pachet Reveal.js generat automat din main. Serverul cs.unibuc.ro verifică actualizările la fiecare minut.'
+          fi
+          digest=$(sha256sum "$RUNNER_TEMP/amss-presentation.tar.gz" | cut -d ' ' -f 1)
+          printf '{"revision":"%s","sha256":"%s"}\n' "$GITHUB_SHA" "$digest" > "$RUNNER_TEMP/latest.json"
+          gh release upload amss-live "$RUNNER_TEMP/amss-presentation.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
+          # Publish metadata last. A concurrent download with a mismatched digest is retried next minute.
+          gh release upload amss-live "$RUNNER_TEMP/latest.json" --clobber --repo "$GITHUB_REPOSITORY"

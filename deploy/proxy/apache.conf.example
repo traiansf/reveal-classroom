@@ -1,0 +1,8 @@
+# Apache 2.4.47+ (mod_proxy, mod_proxy_http): include inside an existing HTTPS VirtualHost.
+# Serves the presentations at https://HOST/slides/ from a service listening on 127.0.0.1:3000
+# with BASE_PATH=/slides. The prefix is kept in the forwarded requests; WebSocket upgrades are
+# handled by mod_proxy_http. For a whole host, use "/" and an empty BASE_PATH.
+ProxyRequests Off
+RedirectMatch 302 "^/slides$" "/slides/"
+ProxyPass "/slides/" "http://127.0.0.1:3000/slides/" upgrade=websocket timeout=90
+ProxyPassReverse "/slides/" "http://127.0.0.1:3000/slides/"

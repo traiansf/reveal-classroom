@@ -1,0 +1,62 @@
+# GitHub Actions workflow for an instance repository (copy to .github/workflows/presentations.yml).
+# On every push to main it builds the decks, tests the engine, packs a deploy bundle and publishes
+# it with latest.json in a GitHub release; servers installed with deploy/user/install.sh and
+# RELEASE_URL=https://github.com/OWNER/REPO/releases/download/presentations-live pull it within a minute.
+# Adjust: INSTANCE_DIR (folder with reveal-classroom.config.json and package.json), the engine
+# version, the build tools your Pandoc filters need, and the release tag.
+name: Presentations
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: presentations-production
+  cancel-in-progress: false
+
+env:
+  INSTANCE_DIR: presentation
+  RELEASE_TAG: presentations-live
+  BUNDLE_NAME: reveal-classroom.tar.gz
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - name: Install pandoc
+        run: |
+          curl -fsSL --retry 3 https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb -o "$RUNNER_TEMP/pandoc.deb"
+          sudo dpkg -i "$RUNNER_TEMP/pandoc.deb"
+      - name: Build, test and pack
+        working-directory: ${{ env.INSTANCE_DIR }}
+        run: |
+          npm ci
+          npx reveal-classroom build --config reveal-classroom.config.json
+          npx reveal-classroom bundle --dist dist --deploy deploy --revision "$GITHUB_SHA" --out "$RUNNER_TEMP/$BUNDLE_NAME"
+      - name: Publish the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title 'Presentations for the online service' --notes 'Built automatically from main.'
+          fi
+          digest=$(sha256sum "$RUNNER_TEMP/$BUNDLE_NAME" | cut -d ' ' -f 1)
+          printf '{"revision":"%s","sha256":"%s"}\n' "$GITHUB_SHA" "$digest" > "$RUNNER_TEMP/latest.json"
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/$BUNDLE_NAME" --clobber --repo "$GITHUB_REPOSITORY"
+          # Metadata last: a server that downloads in between sees a checksum mismatch and retries.
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/latest.json" --clobber --repo "$GITHUB_REPOSITORY"
