@@ -1,13 +1,33 @@
 {
-  "name": "amss-presentation",
-  "private": true,
+  "name": "reveal-classroom",
+  "version": "0.1.0",
+  "description": "Pandoc Markdown lectures as reveal.js presentations, synchronized for the classroom: phone controller with notes and pacing, projector and audience links, self-hosted server or public relay.",
+  "license": "MIT",
+  "author": "Traian-Florin Șerbănuță",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/traiansf/reveal-classroom.git"
+  },
+  "keywords": ["reveal.js", "pandoc", "presentation", "classroom", "teaching", "speaker-notes", "socket.io", "multiplex"],
   "type": "module",
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "reveal-classroom": "bin/reveal-classroom.mjs"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "client/",
+    "i18n/",
+    "deploy/",
+    "server.mjs",
+    "package-lock.json"
+  ],
   "scripts": {
-    "build": "node build.mjs",
-    "start": "node server.mjs",
+    "build": "node bin/reveal-classroom.mjs build --config examples/minimal/reveal-classroom.config.json",
+    "start": "node bin/reveal-classroom.mjs serve --dist examples/minimal/dist",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {

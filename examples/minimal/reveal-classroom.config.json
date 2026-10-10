@@ -1,0 +1,8 @@
+{
+  "title": "reveal-classroom demo",
+  "language": "en",
+  "decks": { "root": "decks" },
+  "launcher": { "preselect": "^(\\d+)-" },
+  "relay": { "url": "https://multiplex.up.railway.app/" },
+  "slideBackgrounds": { "transition": "#13294b" }
+}

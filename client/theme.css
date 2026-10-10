@@ -1,0 +1,35 @@
+/* Default reveal-classroom theme: a plain, readable look for projectors. Copy this file into your
+   instance (config "theme") to change colors, fonts or the title slide. */
+:root { --heading:#13294b; --accent:#0b6e75; --text:#1f2a30; --muted:#55636a; --rule:#d6e0e3; --code:#f3f6f7; }
+.reveal { font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif; font-size:28px; color:var(--text); }
+.reveal .slides { text-align:left; }
+.reveal .slides section { box-sizing:border-box; padding:28px 48px; line-height:1.38; }
+.reveal h1,.reveal h2,.reveal h3 { color:var(--heading); font-weight:700; line-height:1.15; text-wrap:balance; }
+.reveal h1 { font-size:1.6em; margin:0 0 .65em; padding-bottom:.3em; border-bottom:2px solid var(--rule); }
+.reveal h2 { font-size:1.15em; }
+.reveal p { margin:0 0 .65em; }
+.reveal strong { color:var(--heading); }
+.reveal a { color:var(--accent); text-underline-offset:.15em; }
+.reveal ul,.reveal ol { display:block; margin:0 0 .65em; padding-left:1.4em; }
+.reveal li + li { margin-top:.35em; }
+.reveal li::marker { color:var(--accent); }
+.reveal blockquote { margin:0 0 .7em; padding-left:.8em; border-left:4px solid var(--accent); }
+.reveal table { border-collapse:collapse; font-size:.9em; width:100%; }
+.reveal th,.reveal td { padding:.3em .8em .3em 0; text-align:left; vertical-align:top; border-bottom:1px solid var(--rule); }
+.reveal th { color:var(--heading); border-bottom:2px solid var(--heading); }
+.reveal pre { padding:.65em; background:var(--code); border:1px solid var(--rule); border-radius:6px; font-size:.76em; white-space:pre-wrap; }
+.reveal code { font-family:ui-monospace,Consolas,monospace; }
+.reveal div.columns { display:flex; gap:1.6em; align-items:center; }
+.reveal div.column { min-width:0; }
+.reveal img,.reveal svg { max-width:100%; max-height:390px; height:auto; object-fit:contain; }
+/* Title slide of the default template. */
+.reveal section.titlepage { padding:70px 65px; }
+.reveal .titlepage .logo { float:right; max-width:220px; max-height:220px; margin:0 0 20px 40px; }
+.reveal .titlepage h1 { border:0; font-size:2em; }
+.reveal .titlepage .subtitle { font-size:1.1em; color:var(--accent); }
+.reveal .titlepage .author,.reveal .titlepage .date { color:var(--muted); }
+/* Section dividers: # Heading {.transition} */
+.reveal section.transition h1 { border:0; font-size:2em; padding-top:.6em; border-top:3px solid var(--accent); max-width:23ch; }
+.reveal .slide-number { background:transparent; color:var(--muted); font:16px system-ui,sans-serif; right:18px; bottom:12px; }
+.reveal .progress { color:var(--accent); }
+.reveal .controls { color:var(--accent); bottom:38px; }

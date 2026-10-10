@@ -1,1 +1,6 @@
+* text=auto
 *.sh text eol=lf
+*.in text eol=lf
+*.env text eol=lf
+*.example text eol=lf
+Dockerfile text eol=lf

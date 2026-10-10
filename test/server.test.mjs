@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import http from 'node:http';
 import { io as connect } from 'socket.io-client';
 import { createPresentationServer } from '../server.mjs';
+import { makeDist } from './helpers.mjs';
 
-for (const basePath of ['', '/~tserbanuta/amss']) {
-test('adresa scurtă: așteptare, ultima sesiune, expirare: ' + (basePath || '/'), { timeout:15000 }, async t => {
-  const { server, io } = await createPresentationServer({ password:'test-only', basePath, ttl:1000 });
+const rawStatus = (port, path) => new Promise((resolve, reject) => {
+  http.get({ host:'127.0.0.1', port, path }, res => { res.resume(); resolve(res.statusCode); }).on('error', reject);
+});
+
+for (const basePath of ['', '/~presenter/slides']) {
+test('short address: waiting page, latest session, expiry: ' + (basePath || '/'), { timeout:15000 }, async t => {
+  const dist = await makeDist();
+  t.after(dist.cleanup);
+  const { server, io } = await createPresentationServer({ dist:dist.dir, password:'test-only', basePath, ttl:1000 });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   t.after(() => new Promise(resolve => io.close(resolve)));
@@ -14,18 +22,21 @@ test('adresa scurtă: așteptare, ultima sesiune, expirare: ' + (basePath || '/'
   const now = () => fetch(url + '/now', { redirect:'manual' });
   const waiting = await now();
   assert.equal(waiting.status, 200);
-  assert.match(await waiting.text(), /http-equiv="refresh"/);
+  const page = await waiting.text();
+  assert.match(page, /http-equiv="refresh"/);
+  assert.match(page, new RegExp(dist.strings.server.nowHeading));
   const create = async (deck, password = 'test-only') => fetch(url + '/api/sessions', {
     method:'POST', headers:{ Authorization:'Bearer ' + password, 'Content-Type':'application/json' }, body:JSON.stringify({ deck })
   });
-  const first = await (await create('curs-01-organizare.html')).json();
+  const first = await (await create('one.html')).json();
   assert.match((await now()).headers.get('location'), new RegExp(first.room));
-  const latest = await (await create('curs-02-intelegere.html')).json();
-  assert.equal((await create('curs-01-organizare.html', 'wrong')).status, 401);
+  const latest = await (await create('two.html')).json();
+  assert.equal((await create('one.html', 'wrong')).status, 401);
+  assert.equal((await create('unknown.html')).status, 400);
   const redirect = await now();
   assert.equal(redirect.status, 302);
   assert.equal(redirect.headers.get('cache-control'), 'no-store');
-  assert.equal(redirect.headers.get('location'), basePath + '/decks/curs-02-intelegere.html?room=' + latest.room + '&follow=1');
+  assert.equal(redirect.headers.get('location'), basePath + '/decks/two.html?room=' + latest.room + '&follow=1');
   assert.ok(!redirect.headers.get('location').includes(latest.key));
   const html = await (await fetch(url + '/now')).text();
   assert.doesNotMatch(html, /<aside class="notes"/);
@@ -38,15 +49,18 @@ test('adresa scurtă: așteptare, ultima sesiune, expirare: ' + (basePath || '/'
   assert.equal(expired.headers.get('location'), null);
   assert.match(await expired.text(), /http-equiv="refresh"/);
 });
-test('control, izolare, fragmente, reconectare: ' + (basePath || '/'), { timeout:15000 }, async t => {
-  const { server, io } = await createPresentationServer({ password:'test-only', basePath });
+
+test('control, isolation, fragments, reconnection: ' + (basePath || '/'), { timeout:15000 }, async t => {
+  const dist = await makeDist();
+  t.after(dist.cleanup);
+  const { server, io } = await createPresentationServer({ dist:dist.dir, password:'test-only', basePath });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const origin = 'http://127.0.0.1:' + server.address().port;
   const url = origin + basePath;
   const sockets = [];
   t.after(async () => { sockets.forEach(s => s.disconnect()); await new Promise(resolve => io.close(resolve)); });
-  const deck = 'curs-02-intelegere.html';
+  const deck = 'two.html';
   const create = async (password = 'test-only') => fetch(url + '/api/sessions', {
     method:'POST', headers:{ Authorization:'Bearer '+password, 'Content-Type':'application/json' }, body:JSON.stringify({ deck })
   });
@@ -55,9 +69,9 @@ test('control, izolare, fragmente, reconectare: ' + (basePath || '/'), { timeout
   const otherRoom = await (await create()).json();
   const socket = auth => { const s = connect(origin, { path:basePath + '/socket.io', auth:{ deck, ...auth }, reconnection:false }); sockets.push(s); return s; };
   const denied = socket({ room:room.room, key:'wrong' });
-  assert.match((await once(denied, 'connect_error'))[0].message, /neautorizat/);
-  const wrongDeck = socket({ room:room.room, follower:true, deck:'curs-01-organizare.html' });
-  assert.match((await once(wrongDeck, 'connect_error'))[0].message, /corespunde/);
+  assert.equal((await once(denied, 'connect_error'))[0].message, dist.strings.server.unauthorized);
+  const wrongDeck = socket({ room:room.room, follower:true, deck:'one.html' });
+  assert.equal((await once(wrongDeck, 'connect_error'))[0].message, dist.strings.server.deckMismatch);
   const master = socket(room);
   await once(master, 'connect');
   const follower = socket({ room:room.room, follower:true });
@@ -82,12 +96,20 @@ test('control, izolare, fragmente, reconectare: ' + (basePath || '/'), { timeout
   follower.connect();
   assert.deepEqual((await state)[0], latest);
   assert.equal(leaked, false);
-  const publicHtml = await (await fetch(url + '/decks/' + deck + '?follow=1')).text();
-  assert.doesNotMatch(publicHtml, /<aside class="notes"/);
+  // Followers never receive notes; the presenter's copy keeps them.
+  assert.doesNotMatch(await (await fetch(url + '/decks/' + deck + '?follow=1')).text(), /<aside class="notes"/);
   assert.match(await (await fetch(url + '/decks/' + deck)).text(), /<aside class="notes"/);
-  assert.equal((await fetch(url + '/server.mjs')).status, 404);
-  assert.equal((await fetch(url + '/decks/unreleased.html')).status, 404);
-  assert.equal((await fetch(url + '/socket.io/socket.io.js')).status, 200);
+  assert.doesNotMatch(await (await fetch(url + '/audience/' + deck)).text(), /<aside class="notes"/);
+  for (const file of ['', 'site.js', 'decks.json', 'relay-protocol.js', 'socket.io/socket.io.js']) {
+    assert.equal((await fetch(url + '/' + file)).status, 200, file);
+  }
+  for (const file of ['server.mjs', 'site.json', 'decks/unreleased.html', 'audience/unreleased.html']) {
+    assert.equal((await fetch(url + '/' + file)).status, 404, file);
+  }
+  // Raw paths: fetch would normalize the dot segments before sending them.
+  for (const path of ['/vendor/reveal/../../server.mjs', '/vendor/reveal/%2e%2e/%2e%2e/server.mjs', '/decks/..%2fserver.mjs']) {
+    assert.equal(await rawStatus(server.address().port, basePath + path), 404, path);
+  }
   if (basePath) {
     const redirect = await fetch(url, { redirect:'manual' });
     assert.equal(redirect.status, 308);
@@ -96,3 +118,26 @@ test('control, izolare, fragmente, reconectare: ' + (basePath || '/'), { timeout
   }
 });
 }
+
+test('interface strings follow the instance language', { timeout:10000 }, async t => {
+  const dist = await makeDist({ language:'ro' });
+  t.after(dist.cleanup);
+  const { server, io } = await createPresentationServer({ dist:dist.dir, password:'test-only' });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise(resolve => io.close(resolve)));
+  const url = 'http://127.0.0.1:' + server.address().port;
+  const page = await (await fetch(url + '/now')).text();
+  assert.match(page, /lang="ro"/);
+  assert.match(page, /Prezentarea nu a început încă/);
+  const wrong = await fetch(url + '/api/sessions', { method:'POST', headers:{ Authorization:'Bearer x' }, body:'{}' });
+  assert.deepEqual(await wrong.json(), { error:'Parolă incorectă.' });
+});
+
+test('a password is required and BASE_PATH is validated', async () => {
+  const dist = await makeDist();
+  try {
+    await assert.rejects(createPresentationServer({ dist:dist.dir }), /password/);
+    await assert.rejects(createPresentationServer({ dist:dist.dir, password:'x', basePath:'/a b' }), /BASE_PATH/);
+  } finally { await dist.cleanup(); }
+});

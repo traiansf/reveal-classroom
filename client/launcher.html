@@ -1,21 +1,31 @@
 <!doctype html>
-<html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AMSS — prezentare</title>
+<!-- Template: the build replaces {{key}} with escaped text and {{{key}}} with trusted HTML from the strings. -->
+<html lang="{{lang}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>{{title}}</title>
 <style>
-body{max-width:760px;margin:50px auto;padding:0 24px;font:18px/1.5 system-ui;color:#1d2a2e}h1,h2{color:#0a2145}h2{font-size:1.25em}section{border-top:1px solid #d5e0e3;margin-top:28px;padding-top:14px}select,input,button{font:inherit;padding:10px;max-width:100%;box-sizing:border-box}select{width:100%}button{background:#087373;color:white;border:0;border-radius:5px;cursor:pointer}label{display:block;margin:14px 0 6px}a{color:#087373}#message{white-space:pre-wrap}#links a{display:block;margin:12px 0}
+:root{--text:#1d2a2e;--heading:#0a2145;--accent:#087373;--line:#d5e0e3}
+body{max-width:760px;margin:50px auto;padding:0 24px;font:18px/1.5 system-ui,sans-serif;color:var(--text)}h1,h2{color:var(--heading)}h2{font-size:1.25em}section{border-top:1px solid var(--line);margin-top:28px;padding-top:14px}select,input,button{font:inherit;padding:10px;max-width:100%;box-sizing:border-box}select,input[type=url]{width:100%}button{background:var(--accent);color:white;border:0;border-radius:5px;cursor:pointer}label{display:block;margin:14px 0 6px}a{color:var(--accent)}[role=status]{white-space:pre-wrap}.links a{display:block;margin:12px 0}
 </style></head><body>
-<h1>AMSS — prezentare</h1>
-<label for="deck">Prezentarea</label><select id="deck"></select>
-<section><h2>Un calculator, două ecrane</h2>
-<p>Deschideți prezentarea, apoi apăsați <strong>S</strong> pentru notele profesorului. Mutați prezentarea pe ecranul extins al proiectorului și păstrați fereastra cu note pe calculator.</p>
-<button id="local">Deschide prezentarea</button></section>
-<section><h2>Două calculatoare, sincronizare prin internet</h2>
-<p>Deschideți această pagină la adresa serviciului online. După pornirea sesiunii, deschideți linkul de control pe calculatorul dumneavoastră și linkul de proiecție pe calculatorul proiectorului.</p>
-<form id="remote" name="teacher-login" method="post" action="api/sessions" autocomplete="on">
-<input id="username" name="username" type="text" autocomplete="username" value="profesor" hidden>
-<label for="password">Parola profesorului</label><input id="password" name="password" type="password" autocomplete="current-password" required>
-<button type="submit">Pornește sesiunea sincronizată</button></form>
-<button id="new-session" type="button" hidden>Pregătește o altă sesiune</button>
-<div id="links" hidden><a id="presenter">Deschide prezentarea de control; apoi apasă S pentru note</a><a id="audience" target="_blank" rel="noopener">Deschide proiecția</a><label for="audience-url">Adresa scurtă pentru proiector și participanți</label><input id="audience-url" readonly size="65"><p>Această adresă deschide ultima sesiune pornită de profesor, fără parolă și fără acces la comenzi sau note.</p></div>
+<h1>{{title}}</h1>
+<label for="deck">{{launcher.deckLabel}}</label><select id="deck"></select>
+<section id="local-section"><h2>{{launcher.localHeading}}</h2>
+<p>{{{launcher.localText}}}</p>
+<button id="local" type="button">{{launcher.localButton}}</button></section>
+<section id="server-section" hidden><h2>{{launcher.serverHeading}}</h2>
+<p>{{launcher.serverText}}</p>
+<form id="remote" name="presenter-login" method="post" action="api/sessions" autocomplete="on">
+<input id="username" name="username" type="text" autocomplete="username" value="{{launcher.username}}" hidden>
+<label for="password">{{launcher.passwordLabel}}</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+<button type="submit">{{launcher.serverButton}}</button></form>
+<button id="new-session" type="button" hidden>{{launcher.newSession}}</button>
+<div id="links" class="links" hidden><a id="presenter">{{launcher.presenterLink}}</a><a id="audience" target="_blank" rel="noopener">{{launcher.audienceLink}}</a><label for="audience-url">{{launcher.audienceUrlLabel}}</label><input id="audience-url" readonly size="65"><p>{{launcher.audienceUrlText}}</p></div>
 <p id="message" role="status"></p></section>
-<script src="launcher.js"></script></body></html>
+<section id="relay-section" hidden><h2>{{launcher.relayHeading}}</h2>
+<p>{{launcher.relayText}}</p>
+<label for="relay-url">{{launcher.relayUrlLabel}}</label><input id="relay-url" type="url" required>
+<p><button id="relay-start" type="button">{{launcher.relayButton}}</button></p>
+<div id="relay-links" class="links" hidden><a id="relay-presenter">{{launcher.presenterLink}}</a><a id="relay-audience" target="_blank" rel="noopener">{{launcher.audienceLink}}</a><label for="relay-audience-url">{{launcher.relayAudienceUrlLabel}}</label><input id="relay-audience-url" readonly size="65"></div>
+<p id="relay-message" role="status"></p></section>
+<script src="site.js"></script><script src="relay-protocol.js"></script><script src="launcher.js"></script>
+</body></html>

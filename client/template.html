@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Default Pandoc template for reveal-classroom decks. Engine assets carry data-external="1" so that
+     pandoc --embed-resources leaves them as links to the shared files in dist/; images such as
+     logo-path are embedded. Custom templates must keep the four engine references marked below. -->
+<html lang="$if(lang)$$lang$$else$en$endif$">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>$if(pagetitle)$$pagetitle$$else$$title$$endif$</title>
+  <link rel="stylesheet" href="../vendor/reveal/reveal.css" data-external="1"><!-- required -->
+  <link rel="stylesheet" href="../reveal-classroom.css" data-external="1"><!-- required -->
+  <link rel="stylesheet" href="../theme.css" data-external="1">
+  <style>$styles.html()$</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+$if(title)$
+<section class="titlepage">
+$if(logo-path)$
+  <img class="logo" src="$logo-path$" alt="">
+$endif$
+  <h1>$title$</h1>
+$if(subtitle)$
+  <p class="subtitle">$subtitle$</p>
+$endif$
+$if(author)$
+  <p class="author">$for(author)$$author$$sep$, $endfor$</p>
+$endif$
+$if(date)$
+  <p class="date">$date$</p>
+$endif$
+</section>
+$endif$
+$body$
+</div></div>
+<div id="connection-status" role="status" hidden></div>
+<script src="../vendor/reveal/reveal.js" data-external="1"></script><!-- required -->
+<script src="../vendor/reveal/plugin/notes.js" data-external="1"></script>
+<script src="../site.js" data-external="1"></script><!-- required -->
+<script src="../presentation.js" data-external="1"></script><!-- required -->
+</body>
+</html>
