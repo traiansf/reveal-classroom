@@ -23,7 +23,7 @@
     "i18n/",
     "deploy/",
     "server.mjs",
-    "package-lock.json"
+    "npm-shrinkwrap.json"
   ],
   "scripts": {
     "build": "node bin/reveal-classroom.mjs build --config examples/minimal/reveal-classroom.config.json",
