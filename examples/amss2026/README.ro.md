@@ -1,5 +1,10 @@
 # Prezentare AMSS cu reveal.js
 
+> Notele de operare ale cursului AMSS 2026/2027, păstrate așa cum erau înainte de extragerea
+> proiectului `reveal-classroom`. Comenzile și căile se referă la depozitul cursului
+> (`class/amss-2026/presentation`); pentru proiectul independent vedeți `README.md` din acest folder
+> și documentația din `docs/`.
+
 Același material poate fi prezentat în două moduri:
 
 - **Un calculator, două ecrane:** prezentarea pe proiector; fereastra profesorului, cu note și cronometru, pe ecranul calculatorului. Funcționează fără internet după instalare și generare.

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install pandoc
+        run: |
+          curl -fsSL --retry 3 https://github.com/jgm/pandoc/releases/download/3.6.4/pandoc-3.6.4-1-amd64.deb -o "$RUNNER_TEMP/pandoc.deb"
+          sudo dpkg -i "$RUNNER_TEMP/pandoc.deb"
+      - run: npm ci
+      - run: npm test
+      - name: Check shell scripts
+        run: for f in deploy/user/*.sh examples/amss2026/deploy/*.sh; do bash -n "$f"; done
+      - name: Build and bundle the example
+        run: |
+          npm run build
+          node bin/reveal-classroom.mjs bundle --dist examples/minimal/dist --revision "$GITHUB_SHA" --out "$RUNNER_TEMP/example.tar.gz"
+          tar -tzf "$RUNNER_TEMP/example.tar.gz" | grep -E '^(dist/decks.json|server.mjs|deploy/user/install.sh)$'
