@@ -85,13 +85,20 @@ controller:
   **Landscape:** the slide on the left, notes and buttons on the right.
 - **Back / Next** step through slides and pauses. Swiping horizontally on the slide does the same.
 - The **notes** scroll on their own; long notes never push the buttons off the screen.
-- The **clock** shows minutes and quarter minutes (`23:45`). It starts when the control page
-  first opens and survives reloads of the tab. **Tap it** when the lecture actually begins, to
-  restart it from `0:00`.
+- The **clock** shows minutes and quarter minutes (`23:45`), either the **total** time or the
+  time on the current **slide**, as its small label says. **Tap it** to switch between the two;
+  the choice stays when you change slides. The slide time starts again at each new slide (not at
+  each pause within it). The total starts when the control page first opens; **hold the clock**
+  when the lecture actually begins to restart the total from `0:00`. Both survive reloads of the
+  tab.
 - Under the clock, **on time**, **slow down (−N min)** or **speed up (+N min)** compares the elapsed
   time with the planned interval of the current slide (two minutes of tolerance). The plan comes
   from pacing markers in the notes ([authoring.md](authoring.md#pacing-markers)); decks without
   them show no hint.
+- During a session, the control page and the projection keep their **screen awake** while they
+  are visible (the browser's Screen Wake Lock), so the projector's computer does not start its
+  screen saver although nobody touches it. This needs HTTPS (or `localhost`) and a current
+  browser.
 - The thin progress bar under the slide only shows your position; tapping it does nothing (on
   other devices reveal.js would jump to the corresponding slide).
 
@@ -126,4 +133,5 @@ For lectures, use an HTTPS deployment instead ([deployment.md](deployment.md)).
 | *Incorrect password* | Ask the administrator; the password is set on the server (`PRESENTATION_PASSWORD`). |
 | *The relay did not answer* | The relay is down or the address is wrong. Try again, use another relay, or present from one computer. |
 | The speaker view (**S**) does not open | Allow pop-ups for the site; do not open decks as local files. |
+| The projector's screen saver starts anyway | The projection tab must stay visible (not minimized or behind another tab) and the site must use HTTPS. An organization policy that locks the computer after a period of inactivity may still apply; then keep the one-computer mode, or move the mouse before the time runs out. |
 | The phone shows the normal deck instead of the controller | It is a follower link (`?follow=1` or `/now`). Open the control link from the launcher on the phone. |

@@ -8,8 +8,10 @@ the projector and the audience in step with the device in your hand.
 - **Present from anywhere.** On one computer with the reveal.js speaker view; or from a laptop or a
   phone while the projector and any audience device follow your slide.
 - **A phone controller made for teaching.** The slide on top, your notes in the middle, large
-  **Back / Next** buttons and an elapsed-time clock at the bottom, with *on time / slow down /
-  speed up* hints computed from hidden pacing markers in your notes.
+  **Back / Next** buttons and a clock at the bottom (total time or time on the current slide, at
+  a tap), with *on time / slow down / speed up* hints computed from hidden pacing markers in your
+  notes. During a session the projector's screen stays awake, so no screen saver starts while you
+  present from the phone.
 - **Your own small server** (Node.js): password-protected sessions, a stable short address
   (`/now`) for the projector and the audience, state kept for late joiners and reconnections, and
   speaker notes never sent to followers.

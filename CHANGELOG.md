@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026-10-15
+
+- Phone controller clock: tapping it switches between the total time and the time on the current
+  slide (the choice is kept across slides and reloads); holding it restarts the total, which a tap
+  used to do. Both show minutes and quarter minutes.
+- Session pages (control and projection) keep the screen awake with the Screen Wake Lock API while
+  visible, so the projector's computer no longer starts its screen saver when the slides are
+  driven from a phone.
+- New interface strings `controller.slideTimerLabel`, `controller.timerTotal`,
+  `controller.timerSlide`; `controller.timerTitle` changed meaning. Instances that override them
+  should review their overrides.
+
 ## 0.1.0 — 2026-10-10
 
 First release as an independent project, extracted with its history from the AMSS 2026/2027

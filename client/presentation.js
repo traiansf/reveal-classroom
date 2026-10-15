@@ -3,8 +3,10 @@
   const site = window.REVEAL_CLASSROOM || {};
   const strings = site.strings || {};
   const text = {
-    navigation:'Presentation controls', previous:'Back', next:'Next', timerTitle:'Tap to restart the timer',
-    timerLabel:'Elapsed time: ', timerConfirm:'Restart the timer from 0:00?', notes:'Speaker notes',
+    navigation:'Presentation controls', previous:'Back', next:'Next',
+    timerTitle:'Tap to switch between total time and time on this slide; hold to restart the total time',
+    timerLabel:'Elapsed time: ', slideTimerLabel:'Time on this slide: ', timerTotal:'total', timerSlide:'slide',
+    timerConfirm:'Restart the timer from 0:00?', notes:'Speaker notes',
     noNotes:'This slide has no notes.', onTime:'on time', slowDown:'slow down (−{min} min)', speedUp:'speed up (+{min} min)',
     missingKey:'Session control is missing. Start a session from the main page.',
     disconnected:'Synchronization interrupted. Reconnecting…', unavailable:'Synchronization unavailable: ',
@@ -53,7 +55,7 @@
     panel.innerHTML = `<section id="mobile-notes" aria-label="${escape(text.notes)}" tabindex="0">
       <div id="mobile-notes-content"></div></section><nav aria-label="${escape(text.navigation)}">
       <button type="button" id="previous-slide">${escape(text.previous)}</button>
-      <button type="button" id="mobile-timer" role="timer" title="${escape(text.timerTitle)}">0:00</button>
+      <button type="button" id="mobile-timer" role="timer" title="${escape(text.timerTitle)}"><span id="mobile-timer-mode"></span> <span id="mobile-timer-value">0:00</span></button>
       <button type="button" id="next-slide">${escape(text.next)}</button>
       <span id="mobile-pace" hidden></span>
     </nav>`;
@@ -125,6 +127,17 @@
     const previous = document.getElementById('previous-slide');
     const next = document.getElementById('next-slide');
     const notes = document.getElementById('mobile-notes');
+    // Elapsed times survive reloads of the same tab: the total since the lecture began (holding the
+    // timer restarts it) and the time on the current slide. Tapping switches which one is shown.
+    const timer = document.getElementById('mobile-timer');
+    const timerKey = 'rc-timer-' + (room || relayId || location.pathname);
+    const stored = key => { try { return sessionStorage.getItem(key); } catch { return null; } };
+    const store = (key, value) => { try { sessionStorage.setItem(key, value); } catch {} };
+    let started = Number(stored(timerKey)) || Date.now();
+    store(timerKey, started);
+    let mode = stored('rc-timer-mode') === 'slide' ? 'slide' : 'total';
+    const [slideIndex, slideSince] = (stored(timerKey + '-slide') || '').split(':').map(Number);
+    let slideStarted;
     let lastSlide;
     const updatePanel = () => {
       const slide = Reveal.getCurrentSlide();
@@ -134,24 +147,26 @@
       if (slide !== lastSlide) {
         document.getElementById('mobile-notes-content').innerHTML = Reveal.getSlideNotes(slide) || '<p>' + escape(text.noNotes) + '</p>';
         notes.scrollTop = 0;
+        const index = slides.indexOf(slide);
+        slideStarted = lastSlide === undefined && index === slideIndex && slideSince ? slideSince : Date.now();
+        store(timerKey + '-slide', index + ':' + slideStarted);
         lastSlide = slide;
+        updateTimer();
       }
       updatePace();
     };
-    // Elapsed time survives reloads of the same tab; tapping the timer restarts it when the lecture begins.
-    const timer = document.getElementById('mobile-timer');
-    const timerKey = 'rc-timer-' + (room || relayId || location.pathname);
-    const storage = { get:() => { try { return Number(sessionStorage.getItem(timerKey)); } catch { return 0; } },
-      set:value => { try { sessionStorage.setItem(timerKey, value); } catch {} } };
-    let started = storage.get() || Date.now();
-    storage.set(started);
     // Minutes and quarter minutes, matching the minute checkpoints in the notes.
-    const updateTimer = () => {
-      const seconds = Math.max(0, Math.floor((Date.now() - started) / 1000));
-      timer.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60 - seconds % 15).padStart(2, '0');
-      timer.setAttribute('aria-label', text.timerLabel + timer.textContent);
+    const timerMode = document.getElementById('mobile-timer-mode');
+    const timerValue = document.getElementById('mobile-timer-value');
+    function updateTimer() {
+      const since = mode === 'slide' ? slideStarted : started;
+      const seconds = Math.max(0, Math.floor((Date.now() - (since || Date.now())) / 1000));
+      timerMode.textContent = mode === 'slide' ? text.timerSlide : text.timerTotal;
+      timerValue.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60 - seconds % 15).padStart(2, '0');
+      timer.dataset.mode = mode;
+      timer.setAttribute('aria-label', (mode === 'slide' ? text.slideTimerLabel : text.timerLabel) + timerValue.textContent);
       updatePace();
-    };
+    }
     // Compares the elapsed time with the current slide's planned interval, allowing two minutes either way.
     const pace = document.getElementById('mobile-pace');
     function updatePace() {
@@ -165,10 +180,26 @@
       pace.textContent = message;
       pace.hidden = false;
     }
+    // A long press restarts the total when the lecture begins; the click that ends it is ignored.
+    let hold, held = false;
+    const release = () => clearTimeout(hold);
+    timer.addEventListener('pointerdown', () => {
+      held = false;
+      release();
+      hold = setTimeout(() => {
+        held = true;
+        if (!confirm(text.timerConfirm)) return;
+        started = Date.now();
+        store(timerKey, started);
+        updateTimer();
+      }, 700);
+    });
+    for (const event of ['pointerup', 'pointerleave', 'pointercancel']) timer.addEventListener(event, release);
+    timer.addEventListener('contextmenu', event => event.preventDefault());
     timer.onclick = () => {
-      if (!confirm(text.timerConfirm)) return;
-      started = Date.now();
-      storage.set(started);
+      if (held) { held = false; return; }
+      mode = mode === 'total' ? 'slide' : 'total';
+      store('rc-timer-mode', mode);
       updateTimer();
     };
     updateTimer();
@@ -186,6 +217,23 @@
     });
   }
   if (receiver) return;
+  // During a synchronized session the projector's computer receives no input while the phone drives
+  // the slides, so it would start its screen saver; keep the screen awake (the phone's too) while the
+  // page is visible. The browser releases the lock when the tab is hidden, so it is requested again.
+  if ((room || relayId) && navigator.wakeLock) {
+    let lock = null, requesting = false;
+    const keepAwake = async () => {
+      if (lock || requesting || document.visibilityState !== 'visible') return;
+      requesting = true;
+      try {
+        lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { lock = null; });
+      } catch {} // Not a secure context, or refused by the browser: the screen saver may still start.
+      requesting = false;
+    };
+    document.addEventListener('visibilitychange', keepAwake);
+    keepAwake();
+  }
   const changes = ['slidechanged', 'fragmentshown', 'fragmenthidden', 'paused', 'resumed'];
 
   // Synchronization through this server: per-session control key, retained state for late joiners.
