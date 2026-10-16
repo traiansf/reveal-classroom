@@ -88,7 +88,8 @@ controller:
 - The **clock** shows minutes and quarter minutes (`23:45`), either the **total** time or the
   time on the current **slide**, as its small label says. **Tap it** to switch between the two;
   the choice stays when you change slides. The slide time starts again at each new slide (not at
-  each pause within it). The total starts when the control page first opens; **hold the clock**
+  each pause within it). In slide mode, the planned duration of the current slide follows the
+  elapsed time (`1:30 / 5:00`) when the deck has pacing markers. The total starts when the control page first opens; **hold the clock**
   when the lecture actually begins to restart the total from `0:00`. Both survive reloads of the
   tab.
 - Under the clock, **on time**, **slow down (−N min)** or **speed up (+N min)** compares the elapsed

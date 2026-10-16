@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-10-16
+
+- Phone controller clock, slide mode: the planned duration of the current slide is shown after the
+  elapsed time (`1:30 / 5:00`), computed from the deck's pacing markers; decks without markers
+  show the elapsed time alone.
+- New interface string `controller.slidePlannedLabel` (screen-reader label).
+
 ## 0.2.0 — 2026-10-15
 
 - Phone controller clock: tapping it switches between the total time and the time on the current

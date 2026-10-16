@@ -35,6 +35,7 @@
     "timerTitle": "Atingeți pentru a comuta între timpul total și timpul pe slide; țineți apăsat pentru a reporni timpul total",
     "timerLabel": "Timp scurs: ",
     "slideTimerLabel": "Timp pe acest slide: ",
+    "slidePlannedLabel": ", planificat: ",
     "timerTotal": "total",
     "timerSlide": "slide",
     "timerConfirm": "Reporniți cronometrul de la 0:00?",

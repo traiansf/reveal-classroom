@@ -35,6 +35,7 @@
     "timerTitle": "Tap to switch between total time and time on this slide; hold to restart the total time",
     "timerLabel": "Elapsed time: ",
     "slideTimerLabel": "Time on this slide: ",
+    "slidePlannedLabel": ", planned: ",
     "timerTotal": "total",
     "timerSlide": "slide",
     "timerConfirm": "Restart the timer from 0:00?",

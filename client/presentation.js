@@ -5,7 +5,7 @@
   const text = {
     navigation:'Presentation controls', previous:'Back', next:'Next',
     timerTitle:'Tap to switch between total time and time on this slide; hold to restart the total time',
-    timerLabel:'Elapsed time: ', slideTimerLabel:'Time on this slide: ', timerTotal:'total', timerSlide:'slide',
+    timerLabel:'Elapsed time: ', slideTimerLabel:'Time on this slide: ', slidePlannedLabel:', planned: ', timerTotal:'total', timerSlide:'slide',
     timerConfirm:'Restart the timer from 0:00?', notes:'Speaker notes',
     noNotes:'This slide has no notes.', onTime:'on time', slowDown:'slow down (−{min} min)', speedUp:'speed up (+{min} min)',
     missingKey:'Session control is missing. Start a session from the main page.',
@@ -55,7 +55,7 @@
     panel.innerHTML = `<section id="mobile-notes" aria-label="${escape(text.notes)}" tabindex="0">
       <div id="mobile-notes-content"></div></section><nav aria-label="${escape(text.navigation)}">
       <button type="button" id="previous-slide">${escape(text.previous)}</button>
-      <button type="button" id="mobile-timer" role="timer" title="${escape(text.timerTitle)}"><span id="mobile-timer-mode"></span> <span id="mobile-timer-value">0:00</span></button>
+      <button type="button" id="mobile-timer" role="timer" title="${escape(text.timerTitle)}"><span id="mobile-timer-mode"></span> <span id="mobile-timer-value">0:00</span><span id="mobile-timer-plan" hidden></span></button>
       <button type="button" id="next-slide">${escape(text.next)}</button>
       <span id="mobile-pace" hidden></span>
     </nav>`;
@@ -158,13 +158,21 @@
     // Minutes and quarter minutes, matching the minute checkpoints in the notes.
     const timerMode = document.getElementById('mobile-timer-mode');
     const timerValue = document.getElementById('mobile-timer-value');
+    const timerPlan = document.getElementById('mobile-timer-plan');
+    const clock = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60 - seconds % 15).padStart(2, '0');
     function updateTimer() {
       const since = mode === 'slide' ? slideStarted : started;
       const seconds = Math.max(0, Math.floor((Date.now() - (since || Date.now())) / 1000));
       timerMode.textContent = mode === 'slide' ? text.timerSlide : text.timerTotal;
-      timerValue.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60 - seconds % 15).padStart(2, '0');
+      timerValue.textContent = clock(seconds);
+      // In slide mode, the planned duration of the current slide follows the elapsed time.
+      const i = slides.indexOf(Reveal.getCurrentSlide());
+      const planned = mode === 'slide' && plan && i >= 0 ? Math.round((plan[i + 1] - plan[i]) * 60) : undefined;
+      timerPlan.hidden = planned === undefined;
+      timerPlan.textContent = planned === undefined ? '' : ' / ' + clock(planned);
       timer.dataset.mode = mode;
-      timer.setAttribute('aria-label', (mode === 'slide' ? text.slideTimerLabel : text.timerLabel) + timerValue.textContent);
+      timer.setAttribute('aria-label', (mode === 'slide' ? text.slideTimerLabel : text.timerLabel) + timerValue.textContent
+        + (planned === undefined ? '' : text.slidePlannedLabel + clock(planned)));
       updatePace();
     }
     // Compares the elapsed time with the current slide's planned interval, allowing two minutes either way.
