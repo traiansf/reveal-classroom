@@ -55,6 +55,12 @@ What else to know:
 - **Sessions last eight hours** (configurable by the administrator) and **end when the server
   restarts**, for example during an update. Start a new session if the projection reports that
   the session does not exist.
+- **Ending a session** (after a rehearsal, for example, so that the last slide does not stay on
+  the short address): on the phone controller, **hold** the small *End the session* control under
+  the clock for 1.5 s and confirm; or, from any device, open the launcher, enter the presenter
+  password and press **End the current session**, then confirm. Open projections return to the
+  waiting page by themselves, and `/now` shows it until the next session starts. A tap or a click
+  alone never ends a session.
 - The **speaker view** (**S**) also works in the control tab on a laptop.
 
 ## Relay session (no server)

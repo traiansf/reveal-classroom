@@ -25,6 +25,9 @@ body.mobile-controller { display:grid; grid-template-rows:min(40dvh, 56.25vw) mi
 #mobile-pace[data-pace=on-time] { color:var(--rc-accent); }
 #mobile-pace[data-pace=slower] { color:var(--rc-ahead); }
 #mobile-pace[data-pace=faster] { color:var(--rc-behind); }
+/* Ending the session: a quiet control that needs a long press; it must not look like Back/Next. */
+#mobile-presenter #end-session { grid-column:1 / -1; justify-self:center; min-height:36px; padding:4px 14px; background:transparent; color:var(--rc-behind); font:500 14px system-ui,sans-serif; -webkit-touch-callout:none; user-select:none; }
+#mobile-presenter #end-session[hidden] { display:none; }
 #mobile-notes { overflow:auto; overscroll-behavior:contain; padding:12px 18px; border-top:1px solid var(--rc-line); touch-action:pan-y; }
 #mobile-notes p { margin:0 0 .8em; }
 #mobile-notes ul,#mobile-notes ol { padding-left:1.4em; }

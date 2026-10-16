@@ -69,6 +69,27 @@ export async function createPresentationServer({ dist = resolve(here, 'dist'), p
         currentRoom = room;
         return json(res, 201, { room, key });
       }
+      // Ending a session: DELETE /api/sessions/current with the presenter password, or
+      // DELETE /api/sessions/<room> with that session's control key (or the password). Open
+      // projections are told and return to the waiting page; /now shows it until a new session.
+      if (req.method === 'DELETE' && /^[/]api[/]sessions[/][A-Za-z0-9_-]+$/.test(url.pathname)) {
+        const ip = req.socket.remoteAddress;
+        const now = Date.now();
+        for (const [k,v] of attempts) if (now-v.since > 60000) attempts.delete(k);
+        const attempt = attempts.get(ip) || { count:0, since:now };
+        attempts.set(ip, attempt);
+        if (++attempt.count > 20) return json(res, 429, { error:text.tooManyAttempts });
+        const id = url.pathname.slice('/api/sessions/'.length);
+        const room = id === 'current' ? currentRoom : id;
+        const session = room && rooms.get(room);
+        const auth = req.headers.authorization;
+        const byPassword = equal(auth, 'Bearer ' + password);
+        if (!byPassword && !(session && equal(auth, 'Bearer ' + session.key))) return json(res, 401, { error:text.unauthorized });
+        if (!session || session.expires < now) return json(res, 404, { error:text.sessionExpired });
+        endSession(room);
+        res.writeHead(204, { 'Cache-Control':'no-store' });
+        return res.end();
+      }
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error:text.methodNotAllowed });
       if (url.pathname === '/now' || url.pathname === '/now/') {
         const session = rooms.get(currentRoom);
@@ -106,6 +127,12 @@ export async function createPresentationServer({ dist = resolve(here, 'dist'), p
     }
   });
   const io = new Server(server, { path:basePath + '/socket.io', maxHttpBufferSize:8192 });
+  const endSession = room => {
+    io.in(room).emit('ended');
+    io.in(room).disconnectSockets();
+    rooms.delete(room);
+    if (currentRoom === room) currentRoom = null;
+  };
   io.use((socket, next) => {
     const { room, key, follower, deck } = socket.handshake.auth;
     const session = rooms.get(room);

@@ -87,6 +87,8 @@ Bash; `tar` is invoked with a relative archive name because GNU tar reads `C:` a
 3. Narrow the control window below 600 px (or emulate a phone): slide on top, notes in the middle,
    Back/Next and clock at the bottom; the buttons must stay visible with long notes; tapping the
    progress bar must not jump.
+   Hold *End the session* under the clock (1.5 s) and confirm: the projection must return to
+   the waiting page and `/now` must show it; a short tap must do nothing.
 4. Relay: start a relay session (public relay, or a local Multiplex server); open the projection
    link; it must follow within a second and catch up within 5 s after a reload.
 5. Static: serve `examples/minimal/dist` with any static server; the server section must be

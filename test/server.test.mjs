@@ -50,6 +50,55 @@ test('short address: waiting page, latest session, expiry: ' + (basePath || '/')
   assert.match(await expired.text(), /http-equiv="refresh"/);
 });
 
+test('ending a session: password or key, projections told, /now waits again: ' + (basePath || '/'), { timeout:15000 }, async t => {
+  const dist = await makeDist();
+  t.after(dist.cleanup);
+  const { server, io } = await createPresentationServer({ dist:dist.dir, password:'test-only', basePath });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const origin = 'http://127.0.0.1:' + server.address().port;
+  const url = origin + basePath;
+  const sockets = [];
+  t.after(async () => { sockets.forEach(s => s.disconnect()); await new Promise(resolve => io.close(resolve)); });
+  const deck = 'two.html';
+  const create = async () => (await fetch(url + '/api/sessions', {
+    method:'POST', headers:{ Authorization:'Bearer test-only', 'Content-Type':'application/json' }, body:JSON.stringify({ deck })
+  })).json();
+  const end = (id, auth) => fetch(url + '/api/sessions/' + id, { method:'DELETE', headers:auth ? { Authorization:'Bearer ' + auth } : {} });
+  const socket = auth => { const s = connect(origin, { path:basePath + '/socket.io', auth:{ deck, ...auth }, reconnection:false }); sockets.push(s); return s; };
+  const first = await create();
+  const second = await create();
+  // Only the password or the session's own key may end it; a wrong key is refused before existence is revealed.
+  assert.equal((await end('current')).status, 401);
+  assert.equal((await end('current', 'wrong')).status, 401);
+  assert.equal((await end(first.room, second.key)).status, 401);
+  assert.equal((await end('missing', 'test-only')).status, 404);
+  // The key of a session ends that session, even when it is not the current one.
+  const follower = socket({ room:first.room, follower:true });
+  await once(follower, 'connect');
+  const told = once(follower, 'ended');
+  assert.equal((await end(first.room, first.key)).status, 204);
+  await told;
+  await once(follower, 'disconnect');
+  assert.equal((await end(first.room, first.key)).status, 401);
+  assert.equal((await fetch(url + '/now', { redirect:'manual' })).headers.get('location'), basePath + '/decks/two.html?room=' + second.room + '&follow=1');
+  // The password ends the current session; the short address shows the waiting page again.
+  const projection = socket({ room:second.room, follower:true });
+  await once(projection, 'connect');
+  const toldToo = once(projection, 'ended');
+  assert.equal((await end('current', 'test-only')).status, 204);
+  await toldToo;
+  const waiting = await fetch(url + '/now', { redirect:'manual' });
+  assert.equal(waiting.status, 200);
+  assert.match(await waiting.text(), new RegExp(dist.strings.server.nowHeading));
+  assert.equal((await end('current', 'test-only')).status, 404);
+  const rejoin = socket({ room:second.room, follower:true });
+  assert.equal((await once(rejoin, 'connect_error'))[0].message, dist.strings.server.sessionExpired);
+  // The next session takes the short address again.
+  const third = await create();
+  assert.match((await fetch(url + '/now', { redirect:'manual' })).headers.get('location'), new RegExp(third.room));
+});
+
 test('control, isolation, fragments, reconnection: ' + (basePath || '/'), { timeout:15000 }, async t => {
   const dist = await makeDist();
   t.after(dist.cleanup);

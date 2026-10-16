@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-10-16
+
+- Sessions can be ended on purpose: `DELETE /api/sessions/current` with the presenter password,
+  or `DELETE /api/sessions/<room>` with that session's control key. Open projections receive
+  `ended` and return to the waiting page; `/now` shows it until a new session starts.
+- Phone controller: an *End the session* control under the clock, which needs a 1.5 s press and
+  a confirmation. Launcher: *End the current session* with the presenter password and a
+  confirmation.
+- New interface strings: `launcher.endSession`, `endConfirm`, `endPassword`, `sessionEnded`,
+  `noSession`, `endFailed`; `controller.endSession`, `endTitle`, `endConfirm`, `sessionEnded`,
+  `endFailed`.
+
 ## 0.3.0 — 2026-10-16
 
 - Phone controller clock, slide mode: the planned duration of the current slide is shown after the

@@ -3,6 +3,9 @@
   const text = { loadError:'The list of presentations cannot be loaded.', noDecks:'No presentations are available yet.',
     wrongPassword:'Incorrect password.', sessionFailed:'The session cannot be started.',
     sessionReady:'Session ready.', relayFailed:'The relay did not answer.', relayReady:'Relay session ready.',
+    endSession:'End the current session', endConfirm:'End the current session? The projection and the audience return to the waiting page.',
+    endPassword:'Enter the presenter password, then end the session.', sessionEnded:'Session ended. The short address shows the waiting page again.',
+    noSession:'There is no active session.', endFailed:'The session cannot be ended.',
     ...(site.strings && site.strings.launcher) };
   const relayProtocol = window.RevealClassroomRelay;
   const select = document.getElementById('deck');
@@ -59,6 +62,28 @@
       form.hidden = true;
       newSession.hidden = false;
       message.textContent = text.sessionReady;
+    } catch (error) { message.textContent = error.message; }
+  };
+
+  // Ending the current session from any device: the presenter password and a confirmation protect it.
+  document.getElementById('end-current').onclick = async () => {
+    const password = document.getElementById('password');
+    message.textContent = '';
+    if (!password.value) {
+      form.hidden = false;
+      newSession.hidden = true;
+      message.textContent = text.endPassword;
+      password.focus();
+      return;
+    }
+    if (!confirm(text.endConfirm)) return;
+    try {
+      const response = await fetch('api/sessions/current', { method:'DELETE', headers:{ Authorization:'Bearer ' + password.value } });
+      if (response.status === 401) throw new Error(text.wrongPassword);
+      if (response.status === 404) throw new Error(text.noSession);
+      if (!response.ok) throw new Error(text.endFailed);
+      document.getElementById('links').hidden = true;
+      message.textContent = text.sessionEnded;
     } catch (error) { message.textContent = error.message; }
   };
 

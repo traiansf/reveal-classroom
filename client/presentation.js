@@ -7,6 +7,9 @@
     timerTitle:'Tap to switch between total time and time on this slide; hold to restart the total time',
     timerLabel:'Elapsed time: ', slideTimerLabel:'Time on this slide: ', slidePlannedLabel:', planned: ', timerTotal:'total', timerSlide:'slide',
     timerConfirm:'Restart the timer from 0:00?', notes:'Speaker notes',
+    endSession:'End the session', endTitle:'Hold to end the session',
+    endConfirm:'End the session? The projection and the audience return to the waiting page.',
+    sessionEnded:'The session has ended.', endFailed:'The session could not be ended.',
     noNotes:'This slide has no notes.', onTime:'on time', slowDown:'slow down (−{min} min)', speedUp:'speed up (+{min} min)',
     missingKey:'Session control is missing. Start a session from the main page.',
     disconnected:'Synchronization interrupted. Reconnecting…', unavailable:'Synchronization unavailable: ',
@@ -58,6 +61,7 @@
       <button type="button" id="mobile-timer" role="timer" title="${escape(text.timerTitle)}"><span id="mobile-timer-mode"></span> <span id="mobile-timer-value">0:00</span><span id="mobile-timer-plan" hidden></span></button>
       <button type="button" id="next-slide">${escape(text.next)}</button>
       <span id="mobile-pace" hidden></span>
+      <button type="button" id="end-session" title="${escape(text.endTitle)}" hidden>${escape(text.endSession)}</button>
     </nav>`;
     document.body.append(panel);
   }
@@ -253,12 +257,12 @@
     } catch { showStatus(text.unavailable + 'socket.io'); return; }
     const socket = io({ path:new URL('../socket.io', location.href).pathname,
       auth:{ room, key, follower, deck:location.pathname.split('/').pop() } });
-    let applying = false;
+    let applying = false, ended = false;
     const publish = () => {
       if (!follower && !applying && socket.connected) socket.emit('state', Reveal.getState());
     };
     socket.on('connect', () => { showStatus(''); publish(); });
-    socket.on('disconnect', () => showStatus(text.disconnected));
+    socket.on('disconnect', () => { if (!ended) showStatus(text.disconnected); });
     socket.on('connect_error', error => showStatus(text.unavailable + error.message));
     socket.on('state', state => {
       if (!follower) return;
@@ -266,7 +270,40 @@
       Reveal.setState(state);
       applying = false;
     });
+    // The presenter ended the session: projections go back to the waiting page, which picks up
+    // the next session by itself; the control page stops synchronizing and says so.
+    socket.on('ended', () => {
+      ended = true;
+      if (follower) { location.replace(new URL('../now', location.href).href); return; }
+      socket.disconnect();
+      showStatus(text.sessionEnded);
+    });
     for (const event of changes) Reveal.on(event, publish);
+    // Ending from the phone controller takes a long press and a confirmation, so that a stray tap
+    // during a lecture cannot end the session.
+    const end = document.getElementById('end-session');
+    if (end) {
+      end.hidden = false;
+      let hold;
+      const release = () => clearTimeout(hold);
+      end.addEventListener('pointerdown', () => {
+        release();
+        hold = setTimeout(async () => {
+          if (!confirm(text.endConfirm)) return;
+          try {
+            const response = await fetch(new URL('../api/sessions/' + encodeURIComponent(room), location.href).href,
+              { method:'DELETE', headers:{ Authorization:'Bearer ' + key } });
+            if (!response.ok && response.status !== 404) throw new Error(String(response.status));
+            ended = true;
+            socket.disconnect();
+            showStatus(text.sessionEnded);
+            end.disabled = true;
+          } catch { showStatus(text.endFailed); }
+        }, 1500);
+      });
+      for (const event of ['pointerup', 'pointerleave', 'pointercancel']) end.addEventListener(event, release);
+      end.addEventListener('contextmenu', event => event.preventDefault());
+    }
     return;
   }
 
